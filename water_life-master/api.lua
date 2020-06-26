@@ -2,14 +2,29 @@
 local abs = math.abs
 local pi = math.pi
 local floor = math.floor
+local ceil = math.ceil
 local sqrt = math.sqrt
 local max = math.max
 local min = math.min
 local pow = math.pow
 local sign = math.sign
 local time = os.time
+local rad = math.rad
+local random = water_life.random
 
 
+local neighbors ={
+	{x=1,z=0},
+	{x=1,z=1},
+	{x=0,z=1},
+	{x=-1,z=1},
+	{x=-1,z=0},
+	{x=-1,z=-1},
+	{x=0,z=-1},
+	{x=1,z=-1}
+	}
+
+	
 -- pseudo random generator, init and call function
 water_life.randomtable = PcgRandom(math.random(2^23)+1)
 
@@ -34,7 +49,7 @@ function water_life_get_biome_data(pos)
 	local biome = {}
 	biome.id = table.biome
 	biome.name = minetest.get_biome_name(table.biome)
-	biome.temp = math.floor((table.heat-32)*5/9)
+	biome.temp = math.floor((table.heat-32)*5/9)				--turn fahrenheit into celsius
 	biome.humid = math.floor(table.humidity*100)/100
 	return biome
 end
@@ -97,6 +112,19 @@ function water_life.dist2tgt(self,tgt)
 end
 
 
+function water_life.dumbstep(self,height,tpos,speed_factor,idle_duration)
+	if height <= 0.001 then
+		mobkit.lq_turn2pos(self,tpos) 
+		water_life.lq_dumbwalk(self,tpos,speed_factor)
+	else
+		mobkit.lq_turn2pos(self,tpos) 
+		water_life.lq_dumbjump(self,height) 
+	end
+	idle_duration = idle_duration or 6
+	mobkit.lq_idle(self,random(ceil(idle_duration*0.5),idle_duration))
+end
+
+
 
  -- drop on death what is definded in the entity table
 function water_life.handle_drops(self)   
@@ -136,7 +164,52 @@ function water_life.feed_shark(self)
 end
 
 
-function water_life.aqua_radar_dumb(pos,yaw,range,reverse)
+
+
+function water_life.get_close_drops(self,name)
+	
+	
+	local objs = minetest.get_objects_inside_radius(self.object:get_pos(), water_life.abr * 16)
+	if #objs < 1 then return nil end
+	
+	for i = #objs,1,-1 do
+		local entity = objs[i]:get_luaentity()
+		if not entity or not entity.name == "__builtin:item" then table.remove(objs,i) end   -- remove any entity different from a drop
+	end
+	
+	if #objs < 1 then return nil end
+	if not name then return objs[random(#objs)] end 									-- no name, return random drop
+	
+	for i=#objs,1,-1 do
+		local entity = objs[i]:get_luaentity()
+		if not entity.itemstring then 
+			table.remove(objs,i)
+		else
+			if not string.match(entity.itemstring,name) then table.remove(objs,i) end			-- remove anything different from name 
+		end
+	end
+	
+	if #objs < 1 then
+		return nil
+	else
+		return objs[random(#objs)]
+	end
+end
+	
+
+function water_life.inwater(obj)
+	if not obj then return nil end
+	local pos = obj:get_pos()
+	local node = minetest.get_node(pos)
+	if not node or node.name == 'ignore' then return nil end
+	if not minetest.registered_nodes[node.name] then return nil end						-- handle unknown nodes
+		
+	local type = minetest.registered_nodes[node.name]["liquidtype"]
+	if type == "none" then return nil end
+	return true
+end
+
+function water_life.aqua_radar_dumb(pos,yaw,range,reverse,shallow) -- same as mobkit's but added shallow water if true
 	range = range or 4
 	
 	local function okpos(p)
@@ -145,7 +218,7 @@ function water_life.aqua_radar_dumb(pos,yaw,range,reverse)
 			if node.drawtype == 'liquid' then 
 				local nodeu = mobkit.nodeatpos(mobkit.pos_shift(p,{y=1}))
 				local noded = mobkit.nodeatpos(mobkit.pos_shift(p,{y=-1}))
-				if (nodeu and nodeu.drawtype == 'liquid') or (noded and noded.drawtype == 'liquid') then
+				if ((nodeu and nodeu.drawtype == 'liquid') or (noded and noded.drawtype == 'liquid')) or shallow then
 					return true
 				else
 					return false
@@ -210,16 +283,50 @@ for _,obj in ipairs(all_objects) do
 	end
 	if entity and entity.name == "water_life:whale" then
 		hasil.whales = hasil.whales +1
-    elseif entity and entity.name == "water_life:shark" then
+	elseif entity and entity.name == "water_life:shark" then
 		hasil.sharks = hasil.sharks +1
-    elseif entity and (entity.name == "water_life:fish" or entity.name == "water_life:fish_tamed") then
-        hasil.fish = hasil.fish +1
+	elseif entity and (entity.name == "water_life:fish" or entity.name == "water_life:fish_tamed") then
+		hasil.fish = hasil.fish +1
+	end
+	
+	if entity and entity.name then
+			if not hasil[entity.name] then
+				hasil[entity.name] = 1
+			else
+				hasil[entity.name] = hasil[entity.name] +1
+			end
+		end
+	end
+
+	return hasil
+end
+
+
+function water_life.get_herd_members(self,radius)
+	
+	local pos = mobkit.get_stand_pos(self)
+	local name = self.name
+	
+	if not radius then radius = water_life.abo * 16 end
+
+	local all_objects = minetest.get_objects_inside_radius(pos, radius)
+	if #all_objects < 1 then return nil end
+
+	for i = #all_objects,1,-1 do
+	local entity = all_objects[i]:get_luaentity()
+		
+		if entity and entity.name ~= name then
+				table.remove(all_objects,i)
+		end
+		
+	end
+	
+	if #all_objects < 1 then
+		return nil
+	else
+		return all_objects
 	end
 end
-return hasil
-end
-
-
 
 
 -- returns 2D angle from self to target in radians
@@ -240,239 +347,22 @@ function water_life.get_yaw_to_pos(self,tpos)
     return tyaw
 end
 
--- turn around 180degrees from tgtob and swim away until out of sight
-function water_life.hq_swimfrom(self,prty,tgtobj,speed,outofsight) 
-	
-	local func = function(self)
-		if not outofsight then outofsight = self.view_range * 1.5 end
-		
-		if not mobkit.is_alive(tgtobj) then return true end
-        
-            local pos = mobkit.get_stand_pos(self)
-            local opos = tgtobj:get_pos()
-			local yaw = water_life.get_yaw_to_object(self,tgtobj) + math.rad(random(-30,30))+math.rad(180)
-            local distance = vector.distance(pos,opos)
-            
-            if distance < outofsight then
-                
-                local swimto, height = water_life.aqua_radar_dumb(pos,yaw,3)
-                if height and height > pos.y then
-                    local vel = self.object:get_velocity()
-                    vel.y = vel.y+0.1
-                    self.object:set_velocity(vel)
-                end	
-                mobkit.hq_aqua_turn(self,51,swimto,speed)
-                
-            else
-                return true
-            end
-                
-            --minetest.chat_send_all("angel= "..dump(yaw).."  viewrange= "..dump(self.view_range).." distance= "..dump(vector.distance(pos,opos)))
 
-        
-		
+
+
+
+
+function water_life.isinliquid(target)
+	if not target then return false end
+	local nodepos = mobkit.get_stand_pos(target)
+	local node1 = mobkit.nodeatpos(nodepos)
+	nodepos.y = nodepos.y -1
+	local node2 = mobkit.nodeatpos(nodepos)
+	if node1 and node1.drawtype=='liquid' or (node2 and node2.drawtype=='liquid' and node1 and node1.drawtype=='airlike') then
+		return true
 	end
-	mobkit.queue_high(self,func,prty)
 end
 
-
-
--- same as mobkit.hq_aqua_turn but for large mobs
-function water_life.big_hq_aqua_turn(self,prty,tyaw,speed)
-    
-	local func = function(self)
-    if not speed then speed = 0.4 end
-    if speed < 0 then speed = speed * -1 end
-        
-        local finished=mobkit.turn2yaw(self,tyaw,speed)
-        if finished then return true end
-	end
-	mobkit.queue_high(self,func,prty)
-end
-
-
-
--- same as mobkit.hq_aqua_roam but for large mobs
-function water_life.big_aqua_roam(self,prty,speed)
-	local tyaw = 0
-	local init = true
-	local prvscanpos = {x=0,y=0,z=0}
-	local center = self.object:get_pos()
-	local func = function(self)
-		if init then
-			mobkit.animate(self,'def')
-			init = false
-		end
-		local pos = mobkit.get_stand_pos(self)
-		local yaw = self.object:get_yaw()
-		local scanpos = mobkit.get_node_pos(mobkit.pos_translate2d(pos,yaw,speed))
-		if not vector.equals(prvscanpos,scanpos) then
-			prvscanpos=scanpos
-			local nyaw,height = water_life.aqua_radar_dumb(pos,yaw,speed,true)
-			if height and height > pos.y then
-				local vel = self.object:get_velocity()
-				vel.y = vel.y+0.1
-				self.object:set_velocity(vel)
-			end	
-			if yaw ~= nyaw then
-				tyaw=nyaw
-				mobkit.hq_aqua_turn(self,prty+1,tyaw,speed)
-				return
-			end
-		end
-		if mobkit.timer(self,10) then
-			if vector.distance(pos,center) > water_life.abr*16*0.5 then
-				tyaw = minetest.dir_to_yaw(vector.direction(pos,{x=center.x+random()*10-5,y=center.y,z=center.z+random()*10-5}))
-			else
-				if random(10)>=9 then tyaw=tyaw+random()*pi - pi*0.5 end
-			end
-		end
-		
-		if mobkit.timer(self,20) then mobkit.turn2yaw(self,tyaw,-1) end
-		--local yaw = self.object:get_yaw()
-		mobkit.go_forward_horizontal(self,speed)
-	end
-	mobkit.queue_high(self,func,prty)
-end
-
-
-
-function water_life.hq_snail_move(self,prty)
-	local ground = mobkit.get_stand_pos(self)
-	local coraltable = minetest.find_nodes_in_area({x=ground.x-3, y=ground.y-1, z=ground.z-3}, {x=ground.x+3, y=ground.y, z=ground.z+3}, water_life.urchinspawn)
-	if not coraltable or #coraltable < 1 then return end
-	local tgpos = coraltable[random(#coraltable)]
-	
-	local func = function(self)
-		if not mobkit.is_alive(self) then return true end
-		local pos = mobkit.get_stand_pos(self)
-		local dist = vector.distance(pos,tgpos)
-		
-		mobkit.drive_to_pos(self,tgpos,0.01,0.1,1.5)
-		--minetest.chat_send_all(dump(dist))
-		if dist <= 1.8 then return true end
-	end
-	
-	mobkit.queue_high(self,func,prty)
-end
-	
-
-function water_life.hq_idle(self,prty,duration,anim)
-	anim = anim or 'stand'
-	local init = true
-	
-	local func=function(self)
-		if init then 
-			mobkit.animate(self,anim) 
-			init=false
-		end
-		duration = duration-self.dtime
-		if duration <= 0 then return true end
-	end
-	mobkit.queue_high(self,func,prty)
-end
-
-
--- swim to the next "node" which is inside viewrange or quit -- node can be string or table of string
--- if tgtpos is given node will be ignored
-function water_life.hq_swimto(self,prty,speed,node,tgtpos)
-	
-	local endpos = tgtpos
-	local pos = self.object:get_pos()
-	local r = self.view_range
-	if not tgtpos then
-		endpos = minetest.find_node_near(pos, r, node)
-	end
-    if not endpos then return true end
-    
-    
-	local func = function(self)
-	
-	
-		local yaw = water_life.get_yaw_to_pos(self,endpos)
-		if not mobkit.is_alive(self) then return true end
-		local pos = self.object:get_pos()
-		
-		
-		if vector.distance(pos,endpos) > 1 then
-					
-					--minetest.chat_send_all(vector.distance(pos,endpos))
-					if endpos.y > pos.y then
-						local vel = self.object:get_velocity()
-						vel.y = vel.y+0.3
-						self.object:set_velocity(vel)
-					end	
-					mobkit.hq_aqua_turn(self,prty+5,yaw,speed)
-					pos = self.object:get_pos() --mobkit.get_stand_pos(self)
-					yaw = water_life.get_yaw_to_pos(self,endpos)
-				
-		else			
-			return true
-		end
-    
-end
-	mobkit.queue_high(self,func,prty)
-    
-end
-
-
-function water_life.hq_water_attack(self,tgtobj,prty,speed)
-	
-	local pos = self.object:get_pos()
-	local selfbox = self.object:get_properties().collisionbox
-	local tgtbox = tgtobj:get_properties().collisionbox
-	if not speed then speed = 1 end
-    
-	local func = function(self)
-    
-		if not mobkit.is_alive(self) or not mobkit.is_alive(tgtobj) or tgtobj:get_attach() ~= nil then return true end
-		local pos = self.object:get_pos()
-		local endpos = tgtobj:get_pos()
-		if not mobkit.is_in_deep(tgtobj) and vector.distance (pos,endpos) > 2 then return true end
-		local yaw = water_life.get_yaw_to_pos(self,endpos)
-		local entity = nil
-		if not tgtobj:is_player() then entity = tgtobj:get_luaentity() end
-		
-		if vector.distance(pos,endpos) > selfbox[5]+tgtbox[5] then
-					--minetest.chat_send_all(dump(vector.distance(pos,endpos)).."   "..dump(selfbox[5]+tgtbox[5]))
-					if endpos.y > pos.y +tgtbox[5] then
-						local vel = self.object:get_velocity()
-						vel.y = vel.y+0.4
-						self.object:set_velocity(vel)
-					end
-					if endpos.y < pos.y  then
-						local vel = self.object:get_velocity()
-						vel.y = vel.y-0.1
-						self.object:set_velocity(vel)
-					end
-					mobkit.hq_aqua_turn(self,prty+5,yaw,speed)
-					
-		else
-			if mobkit.is_alive(tgtobj) then
-				
-				--minetest.chat_send_all("<<<HIT>>>")
-				tgtobj:punch(self.object,1,self.attack)
-				return true
-				
-				
-			else
-				return true
-			end
-		end
-		if entity and string.match(entity.name,"petz") and vector.distance(pos,endpos) < 2 then
-			if mobkit.is_alive(tgtobj) then
-				--minetest.chat_send_all("<<<HIT>>>")
-				mobkit.hurt(entity,self.attack.damage_groups.fleshy or 4)
-				
-			else
-				return true
-			end
-		end
-    
-end
-	mobkit.queue_high(self,func,prty)
-    
-end
 
 -- find if there is a node between pos1 and pos2
 -- water = true means water = obstacle
@@ -600,7 +490,124 @@ function water_life.water_depth(pos,max)
 end
 	
 	
+-- amphibious version of mobkit
+function water_life.get_next_waypoint_fast(self,tpos,nogopos)
+	local pos = mobkit.get_stand_pos(self)
+	local dir=vector.direction(pos,tpos)
+	local neighbor = mobkit.dir2neighbor(dir)
+	local height, pos2, liquidflag = mobkit.is_neighbor_node_reachable(self,neighbor)
+	local heightr = nil
+	local heightl = nil
+	local liq = nil
+	
+	if height then
+		local fast = false
+		heightl = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,-1))
+		if heightl and abs(heightl-height)<0.001 then
+			heightr = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,1))
+			if heightr and abs(heightr-height)<0.001 then
+				fast = true
+				dir.y = 0
+				local dirn = vector.normalize(dir)
+				local npos = mobkit.get_node_pos(mobkit.pos_shift(pos,neighbors[neighbor]))
+				local factor = abs(dirn.x) > abs(dirn.z) and abs(npos.x-pos.x) or abs(npos.z-pos.z)
+				pos2=mobkit.pos_shift(pos,{x=dirn.x*factor,z=dirn.z*factor})
+			end
+		end
+		return height, pos2, fast
+	else
 
+		for i=1,4 do
+			-- scan left
+			height, pos2, liq = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,-i))
+			if height then return height,pos2 end
+			-- scan right
+			height, pos2, liq = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,i))
+			if height then return height,pos2 end
+		end
+	end
+end
+
+-- amphibious version of mobkit
+function water_life.goto_next_waypoint(self,tpos)
+	local height, pos2 = water_life.get_next_waypoint_fast(self,tpos)
+	
+	if not height then return false end
+	
+	if height <= 0.01 then
+		local yaw = self.object:get_yaw()
+		local tyaw = minetest.dir_to_yaw(vector.direction(self.object:get_pos(),pos2))
+		if abs(tyaw-yaw) > 1 then
+			mobkit.lq_turn2pos(self,pos2) 
+		end
+		mobkit.lq_dumbwalk(self,pos2)
+	else
+		mobkit.lq_turn2pos(self,pos2) 
+		mobkit.lq_dumbjump(self,height) 
+	end
+	return true
+end
+
+
+
+function water_life.get_next_waypoint(self,tpos)
+	local pos = mobkit.get_stand_pos(self)
+	local dir=vector.direction(pos,tpos)
+	local neighbor = mobkit.dir2neighbor(dir)
+	local function update_pos_history(self,pos)
+		table.insert(self.pos_history,1,pos)
+		if #self.pos_history > 2 then table.remove(self.pos_history,#self.pos_history) end
+	end
+	local nogopos = self.pos_history[2]
+	
+	local height, pos2, liquidflag = mobkit.is_neighbor_node_reachable(self,neighbor)
+--minetest.chat_send_all('pos2 ' .. minetest.serialize(pos2))
+--minetest.chat_send_all('nogopos ' .. minetest.serialize(nogopos))	
+	if height and not (nogopos and mobkit.isnear2d(pos2,nogopos,0.1)) then
+
+		local heightl = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,-1))
+		if heightl and abs(heightl-height)<0.001 then
+			local heightr = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,1))
+			if heightr and abs(heightr-height)<0.001 then
+				dir.y = 0
+				local dirn = vector.normalize(dir)
+				local npos = mobkit.get_node_pos(mobkit.pos_shift(pos,neighbors[neighbor]))
+				local factor = abs(dirn.x) > abs(dirn.z) and abs(npos.x-pos.x) or abs(npos.z-pos.z)
+				pos2=mobkit.pos_shift(pos,{x=dirn.x*factor,z=dirn.z*factor})
+			end
+		end
+		update_pos_history(self,pos2)
+		return height, pos2
+	else
+
+		for i=1,3 do
+			-- scan left
+			local height, pos2, liq = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,-i*self.path_dir))
+			if height and not liq 
+			and not (nogopos and mobkit.isnear2d(pos2,nogopos,0.1)) then
+				update_pos_history(self,pos2)
+				return height,pos2 
+			end			
+			-- scan right
+			height, pos2, liq = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,i*self.path_dir))
+			if height and not liq 
+			and not (nogopos and mobkit.isnear2d(pos2,nogopos,0.1)) then
+				update_pos_history(self,pos2)
+				return height,pos2 
+			end
+		end
+		--scan rear
+		height, pos2, liquidflag = mobkit.is_neighbor_node_reachable(self,mobkit.neighbor_shift(neighbor,4))
+		if height and not liquidflag 
+		and not (nogopos and mobkit.isnear2d(pos2,nogopos,0.1)) then
+			update_pos_history(self,pos2)
+			return height,pos2 
+		end
+	end
+	-- stuck condition here
+	table.remove(self.pos_history,2)
+	self.path_dir = self.path_dir*-1	-- subtle change in pathfinding
+end
 -- Entity definitions
 
 -- entity for showing positions in debug
@@ -629,34 +636,4 @@ minetest.register_on_player_hpchange(function(player, hp_change, reason)
 minetest.register_privilege("god", {description ="unvulnerable"})
 end
 
- --chatcommands
 
-minetest.register_chatcommand("wl_bdata", {
-	params = "",
-	description = "biome id,name,heat and humidity",
-	privs = {server = true},
-	func = function(name, action)
-		local player = minetest.get_player_by_name(name)
-		if not player then return false end
-		local pos = player:get_pos()
-		local table = minetest.get_biome_data(pos)
-		
-		minetest.chat_send_player(name,dump(minetest.registered_biomes[minetest.get_biome_name(table.biome)]))
-                                           
-		minetest.chat_send_player(name,"ID :"..dump(table.biome).."  /Name :"..dump(minetest.get_biome_name(table.biome)).."  /Temp. in C :"..dump(math.floor((table.heat-32)*5/9)).."  /Humidity in % :"..dump(math.floor(table.humidity*100)/100))
-		
-	end
-})
-
-minetest.register_chatcommand("wl_version", {
-	params = "",
-	description = "shows water_life version number",
-	privs = {server = true},
-	func = function(name, action)
-		local player = minetest.get_player_by_name(name)
-		if not player then return false end
-		
-		minetest.chat_send_player(name,core.colorize("#14ee00","Your water_life version # is: "..water_life.version))
-        
-	end
-})

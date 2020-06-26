@@ -1,5 +1,5 @@
 water_life = {}
-water_life.version = "210520"
+water_life.version = "210620"
 water_life.shark_food = {}
 water_life.petz = minetest.get_modpath("petz")
 water_life.mobsredo = minetest.get_modpath("mobs")
@@ -12,7 +12,7 @@ water_life.clams_spawn_rate = tonumber(minetest.settings:get("water_life_clams_s
 water_life.fish_spawn_rate = tonumber(minetest.settings:get("water_life_fish_spawn_rate")) or 1000
 water_life.maxwhales = tonumber(minetest.settings:get("water_life_maxwhales")) or 1
 water_life.maxsharks = tonumber(minetest.settings:get("water_life_maxsharks")) or 5
-water_life.maxmobs = tonumber(minetest.settings:get("water_life_maxmobs")) or 30
+water_life.maxmobs = tonumber(minetest.settings:get("water_life_maxmobs")) or 60
 water_life.apionly = minetest.settings:get_bool("water_life_apionly") or false
 water_life.radar_debug = minetest.settings:get_bool("water_life_radar_debug") or false
 water_life.muddy_water = minetest.settings:get_bool("water_life_muddy_water") or false
@@ -24,17 +24,23 @@ dofile(path.."/api.lua")               											-- load water_life api
 if water_life.muddy_water then dofile(path.."/mapgen.lua") end						-- load muddy_water
 dofile(path.."/crafts.lua")				 									-- load crafts
 dofile(path.."/buoy.lua")													-- load buoy
+dofile(path.."/chatcommands.lua")												-- load chatcommands
+dofile(path.."/behaviors.lua")												-- load behaviors
+
 if not water_life.apionly then
 	dofile(path.."/spawn.lua")												-- load spawn function
-	dofile(path.."/whale.lua")												-- load whales
-	dofile(path.."/shark.lua")												-- load sharks
-	dofile(path.."/riverfish.lua")											-- load riverfish
-	dofile(path.."/piranha.lua")												-- load piranha
-	dofile(path.."/sea_urchin.lua")											-- load sea urchin
-	dofile(path.."/clams.lua")												-- load clams
-	dofile(path.."/plants.lua")												-- load water plants
-	dofile(path.."/corals.lua")												-- load corals
-	dofile(path.."/jellyfish.lua")											-- load jellyfish
+	dofile(path.."/animals/whale.lua")											-- load whales
+	dofile(path.."/animals/shark.lua")											-- load sharks
+	dofile(path.."/animals/riverfish.lua")										-- load riverfish
+	dofile(path.."/animals/piranha.lua")										-- load piranha
+	dofile(path.."/animals/sea_urchin.lua")										-- load sea urchin
+	dofile(path.."/animals/clams.lua")											-- load clams
+	dofile(path.."/flora/plants.lua")											-- load water plants
+	dofile(path.."/flora/corals.lua")											-- load corals
+	dofile(path.."/animals/jellyfish.lua")										-- load jellyfish
+	dofile(path.."/animals/coralfish.lua")										-- load coralfish
+	dofile(path.."/animals/clownfish.lua")										-- load clownfish
+	dofile(path.."/animals/crocodile.lua")										-- load crocodile
 end
 
 
@@ -73,10 +79,7 @@ minetest.register_entity(":zombiestrd:shark", {
 
 
 -- register shark food
---[[
-water_life.register_shark_food("water_life:fish")   --fish is too small for sharks
-water_life.register_shark_food("water_life:fish_tamed")
-]]
+
 
 if minetest.get_modpath("wildlife") then
 	water_life.register_shark_food("wildlife:deer")
@@ -90,6 +93,7 @@ end
 
 if minetest.get_modpath("petz") then
 	water_life.register_shark_food("petz:kitty")
+	water_life.register_shark_food("petz:rat")
 	water_life.register_shark_food("petz:goat")
 	water_life.register_shark_food("petz:puppy")
 	water_life.register_shark_food("petz:ducky")
