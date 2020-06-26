@@ -4,15 +4,7 @@ water_life.urchinspawn = {
 							"default:coral_cyan",
 							"default:coral_green",
 							"default:coral_pink",
-							"default:coral_orange",
-							"water_life:coralmagenta",
-							"water_life:coralskyblue",
-							"seacoral:seacoralsandaqua",
-							"seacoral:seacoralsandcyan",
-							"seacoral:seacoralsandlime",
-							"seacoral:seacoralsandmagenta",
-							"seacoral:seacoralsandredviolet",
-							"seacoral:seacoralsandskyblue"
+							"default:coral_orange"
 }
 
 
