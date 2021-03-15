@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 ---
 --- DRIVER MOUNT
 ---
@@ -10,6 +8,7 @@ local modpath, S = ...
 
 petz.fallback_node = minetest.registered_aliases["mapgen_dirt"] or "default:dirt"
 
+--[[
 local node_ok = function(pos, fallback)
 	fallback = fallback or petz.fallback_node
 	local node = minetest.get_node_or_nil(pos)
@@ -35,6 +34,7 @@ local function node_is(pos)
 	end
 	return "other"
 end
+]]
 
 local function get_sign(i)
 	i = i or 0
@@ -55,36 +55,33 @@ local function get_v(v)
 	return math.sqrt(v.x * v.x + v.z * v.z)
 end
 
-function mobkit.hq_mountdriver(self, prty)
-	local func=function(self)
+function petz.hq_mountdriver(self, prty)
+	local func=function()
 		if not(self.driver) then
 			return true
 		else
 			if mobkit.is_queue_empty_low(self) then
-				mobkit.lq_mountdriver(self)
+				petz.lq_mountdriver(self)
 			end
 		end
 	end
 	mobkit.queue_high(self,func,prty)
 end
 
-function mobkit.lq_mountdriver(self)
+function petz.lq_mountdriver(self)
 	local auto_drive = false
-	local func = function(self)
+	local func = function()
 		if not(self.driver) then return true end
-		local rot_steer, rot_view = math.pi/2, 0
+		local rot_view = 0
 		if self.player_rotation.y == 90 then
-			rot_steer, rot_view = 0, math.pi/2
+			rot_view = math.pi/2
 		end
 		local acce_y = 0
-		local velo
-		if velo == nil then
-			velo= {
-				x= self.max_speed_forward/3,
-				y= 0,
-				z= self.max_speed_forward/3,
-			}
-		end
+		local velo= {
+			x= self.max_speed_forward/3,
+			y= 0,
+			z= self.max_speed_forward/3,
+		}
 		local velocity = get_v(velo)
 		--minetest.chat_send_player("singleplayer", tostring(velocity))
 		-- process controls
@@ -112,13 +109,12 @@ function mobkit.lq_mountdriver(self)
 			velo.y = velo.y + (self.jump_height)*4
 			acce_y = acce_y *1.5
 		else --stand
-			velocity = 0
 			mobkit.animate(self, "stand")
 			return
 		end
 		--Gallop
 		if ctrl.up and ctrl.sneak and not(self.gallop_exhausted) then
-			if self.gallop == false then
+			if not self.gallop then
 				self.gallop = true
 				mokapi.make_sound("object", self.object, "petz_horse_whinny", petz.settings.max_hear_distance)
 				mokapi.make_sound("object", self.object, "petz_horse_gallop", petz.settings.max_hear_distance)
@@ -139,9 +135,8 @@ function mobkit.lq_mountdriver(self)
 			velocity = velocity - get_sign(velocity)
 		end
 		-- Set position, velocity and acceleration
-		local new_velo = {x = 0, y = 0, z = 0}
+		local new_velo = get_velocity(velocity, self.object:get_yaw() - rot_view, velo.y)
 		local new_acce = {x = 0, y = mobkit.gravity, z = 0}
-		new_velo = get_velocity(velocity, self.object:get_yaw() - rot_view, velo.y)
 		self.object:set_velocity(new_velo)
 		if not(self.gallop) then
 			mobkit.animate(self, "walk")	-- set animation

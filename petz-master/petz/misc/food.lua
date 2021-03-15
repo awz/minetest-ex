@@ -1,4 +1,4 @@
-local modpath, S = ...
+local S = ...
 
 --Ducky/Chicken Eggs
 
@@ -137,6 +137,15 @@ minetest.register_craftitem("petz:chicken_legs_bucket", {
         return minetest.do_item_eat(12, "bucket:bucket_empty", itemstack, user, pointed_thing)
     end,
 	groups = {flammable = 2, food = 2, food_meat = 1},
+})
+
+minetest.register_craft({
+	type = "shapeless",
+	output = "petz:roasted_chicken_legs 3",
+    recipe = {"petz:chicken_legs_bucket"},
+    replacements = {
+		{"petz:chicken_legs_bucket", "bucket:bucket_empty"}
+	},
 })
 
 minetest.register_craft({
@@ -355,4 +364,27 @@ minetest.register_craft({
 	output = "petz:roasted_goat_meat",
 	recipe = "petz:raw_goat",
 	cooktime = 3,
+})
+
+--Rabbit Food
+minetest.register_craftitem("petz:raw_rabbit", {
+    description = S("Raw Rabbit"),
+    inventory_image = "petz_raw_rabbit.png",
+    wield_image = "petz_raw_rabbit.png",
+    on_use = minetest.item_eat(1),
+    groups = {flammable = 2, food = 2, food_meat_raw = 1},
+})
+
+minetest.register_craftitem("petz:roasted_rabbit", {
+	description = S("Roasted Rabbit"),
+	inventory_image = "petz_roasted_rabbit.png",
+	on_use = minetest.item_eat(3),
+	groups = {flammable = 2, food = 2, food_meat = 1},
+})
+
+minetest.register_craft({
+	type = "cooking",
+	output = "petz:roasted_rabbit",
+	recipe = "petz:raw_rabbit",
+	cooktime = 2,
 })

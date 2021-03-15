@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 --
 -- Helpers Functions
 --
@@ -54,7 +52,7 @@ function petz.get_player_back_pos(player, pos)
 end
 
 
-function mobkit.check_height(self)
+function petz.check_height(self)
 	local yaw = self.object:get_yaw()
 	local dir_x = -math.sin(yaw) * (self.collisionbox[4] + 0.5)
 	local dir_z = math.cos(yaw) * (self.collisionbox[4] + 0.5)
@@ -70,7 +68,7 @@ function mobkit.check_height(self)
 	return false
 end
 
-function mobkit.check_front_obstacle(self)
+function petz.check_front_obstacle(self)
 	local yaw = self.object:get_yaw()
 	local dir_x = -math.sin(yaw) * (self.collisionbox[4] + 0.5)
 	local dir_z = math.cos(yaw) * (self.collisionbox[4] + 0.5)
@@ -83,7 +81,7 @@ function mobkit.check_front_obstacle(self)
 	return true
 end
 
-function mobkit.check_is_on_surface(self)
+function petz.check_is_on_surface(self)
 	local pos = self.object:get_pos()
 	if pos.y > 0 then
 		return true
@@ -103,7 +101,7 @@ function petz.is_standing(self)
 end
 
 function petz.is_jumping(self)
-	if self.isonground == true then
+	if self.isonground then
 		return false
 	else
 		return true
@@ -111,7 +109,10 @@ function petz.is_jumping(self)
 end
 
 
-function mobkit.check_ground_suffocation(self)
+function petz.check_ground_suffocation(self)
+	if self.can_fly then --some fying mobs can escape from cages by the roof
+		return
+	end
 	local spos = mobkit.get_stand_pos(self)
 	spos.y = spos.y + 0.01
 	if self.type and mobkit.is_alive(self) and not(self.is_baby) then
@@ -141,7 +142,7 @@ function petz.set_velocity(self, velocity)
 	})
 end
 
-function mobkit.node_name_in(self, where)
+function petz.node_name_in(self, where)
 	local pos = self.object:get_pos()
 	local yaw = self.object:get_yaw()
 	if yaw then
@@ -179,6 +180,12 @@ function mobkit.node_name_in(self, where)
 			pos2= {
 				x = pos.x + dir_x,
 				y = pos.y + 1,
+				z = pos.z + dir_z,
+			}
+		elseif where == "front_below" then
+			pos2= {
+				x = pos.x + dir_x,
+				y = pos.y - 1,
 				z = pos.z + dir_z,
 			}
 		end

@@ -1,9 +1,21 @@
 unused_args = false
 allow_defined_top = true
+max_line_length = false
 
 globals = {
     "minetest",
-    "mobkit"
+    "mobkit",
+    "mokapi",
+    "petz",
+    "stairs",
+    "farming",
+    "player_api",
+    "hunger_ng",
+    "dye",
+    "armor",
+    "playerphysics",
+    "player_monoids",
+    "awards"
 }
 
 read_globals = {

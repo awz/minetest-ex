@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 petz.calculate_sleep_times = function(self)
 	if not petz.settings.sleeping then
 		return
@@ -30,8 +28,8 @@ petz.calculate_sleep_times = function(self)
 			sleep_start_time = math.random(day_start, sleep_end_time_limit - sleep_time)
 			sleep_end_time = sleep_start_time + sleep_time
 		end
-		self.sleep_start_time = sleep_start_time
-		self.sleep_end_time = sleep_end_time
+		self.sleep_start_time = mobkit.remember(self, "sleep_start_time", sleep_start_time)
+		self.sleep_end_time = mobkit.remember(self, "sleep_end_time", sleep_end_time)
 		--minetest.chat_send_player("singleplayer", "sleep_time="..tostring(sleep_time).."/sleep_start_time="..tostring(sleep_start_time).."/sleep_end_time="..tostring(sleep_end_time))
 	end
 end
@@ -67,12 +65,12 @@ petz.sleep = function(self, prty, force)
 	mobkit.animate(self, 'sleep')
 	local texture = self.textures[self.texture_no]
 	self.object:set_properties(self, {textures = {texture.."^petz_"..self.type.."_sleep.png"}}) --sleeping eyes
-	mobkit.hq_sleep(self, prty, force)
+	petz.hq_sleep(self, prty, force)
 end
 
-function mobkit.hq_sleep(self, prty, force)
+function petz.hq_sleep(self, prty, force)
 	local timer = 2
-	local func=function(self)
+	local func=function()
 		timer = timer - self.dtime
 		if timer <  0 then
 			if not(force) then

@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 petz.get_node_below = function(pos)
 	local pos_below = {
 		x = pos.x,
@@ -56,10 +54,10 @@ petz.spawn_mob = function(spawn_pos, limit_max_mobs, abr, liquidflag)
 	end
 
 	local candidates_list = {} --Create a sublist of the petz with the same node to spawnand between max_height and min_height
-	for i = 1, #petz.petz_list do
+	for i = 1, #petz.settings["petz_list"] do
 		local pet_name
 		local can_spawn = true
-		pet_name = petz.petz_list[i]
+		pet_name = petz.settings["petz_list"][i]
 		local mob_ent_name = "petz:"..pet_name
 		--minetest.chat_send_player("singleplayer", mob_ent_name)
 		local ent = minetest.registered_entities[mob_ent_name]
@@ -69,7 +67,7 @@ petz.spawn_mob = function(spawn_pos, limit_max_mobs, abr, liquidflag)
 			if can_spawn and petz.settings[pet_name.."_disable_spawn"] then
 				can_spawn = false
 			end
-			if can_spawn and ((ent.is_monster and peaceful == true) or (not(ent.is_monster) and peaceful == false)) then
+			if can_spawn and ((ent.is_monster and peaceful) or (not(ent.is_monster) and not(peaceful))) then
 				can_spawn = false
 			end
 			if can_spawn and ent.spawn_max_height then --check max_height
@@ -100,7 +98,7 @@ petz.spawn_mob = function(spawn_pos, limit_max_mobs, abr, liquidflag)
 			end
 			--Check if monsters are disabled
 			if can_spawn and ent.is_monster then
-				if petz.settings.disable_monsters == true then
+				if petz.settings.disable_monsters then
 					can_spawn = false
 				end
 			end
@@ -119,7 +117,7 @@ petz.spawn_mob = function(spawn_pos, limit_max_mobs, abr, liquidflag)
 				end
 			end
 		end
-		if can_spawn and mokapi.item_in_itemlist(node.name, petz.settings[pet_name.."_spawn_nodes"]) == true then
+		if can_spawn and mokapi.item_in_itemlist(node.name, petz.settings[pet_name.."_spawn_nodes"]) then
 			table.insert(candidates_list, pet_name)
 		end
 	end --end for
@@ -165,7 +163,7 @@ petz.spawn_mob = function(spawn_pos, limit_max_mobs, abr, liquidflag)
 				end
 			end
 		end
-		if (limit_max_mobs) == false or (mob_count < petz.settings.max_mobs) then --check for bigger mobs:
+		if not(limit_max_mobs) or (mob_count < petz.settings.max_mobs) then --check for bigger mobs:
 			local spawn_herd = petz.settings[random_mob.."_spawn_herd"]
 			if spawn_herd then
 				--minetest.chat_send_player("singleplayer", tonumber(spawn_herd))
@@ -189,16 +187,18 @@ petz.spawn_mob = function(spawn_pos, limit_max_mobs, abr, liquidflag)
 				else
 					spawn_pos.z = spawn_pos.z - 2
 				end
+				--[[
 				if i > 1 then
-					local height, liquidflag = mobkit.get_terrain_height(spawn_pos, 32)
-					if height or (liquidflag and ent.can_swin) then
-						local node = petz.get_node_below(spawn_pos)
-						if not(mokapi.item_in_itemlist(node.name, petz.settings[random_mob.."_spawn_nodes"])) then
+					local height, liquidflag2 = mobkit.get_terrain_height(spawn_pos, 32)
+					if height or (liquidflag2 and ent.can_swin) then
+						local node_below = petz.get_node_below(spawn_pos)
+						if not(mokapi.item_in_itemlist(node_below.name, petz.settings[random_mob.."_spawn_nodes"])) then
 							spawn = false
 						end
 					end
 				end
-				if spawn == true then
+				]]
+				if spawn then
 					spawn_pos = petz.pos_to_spawn(random_mob_name, spawn_pos) --recalculate pos.y for bigger mobs
 					minetest.add_entity(spawn_pos, random_mob_name)
 					--minetest.chat_send_player("singleplayer", random_mob.. " spawned!!!")
@@ -213,7 +213,7 @@ minetest.register_globalstep(function(dtime)
 	local abr = tonumber(minetest.get_mapgen_setting('active_block_range')) or 3
 	local radius =  abr * 16 --recommended
 	local interval = petz.settings.spawn_interval
-	local spawn_pos, liquidflag, cave = mobkit.get_spawn_pos_abr(dtime, interval, radius, petz.settings.spawn_chance, 0.2)
+	local spawn_pos, liquidflag = mobkit.get_spawn_pos_abr(dtime, interval, radius, petz.settings.spawn_chance, 0.2)
 	if spawn_pos then
 		petz.spawn_mob(spawn_pos, true, abr, liquidflag)
 	end

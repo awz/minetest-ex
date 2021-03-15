@@ -1,4 +1,4 @@
-local modpath, S = ...
+local S = ...
 
 --
 -- Dreamcatcher (protector for Petz)
@@ -28,7 +28,7 @@ minetest.register_craft({
 })
 
 petz.put_dreamcatcher = function(self, clicker, wielded_item, wielded_item_name)
-	if self.dreamcatcher == true then
+	if self.dreamcatcher then
 		minetest.chat_send_player(clicker:get_player_name(), S("This pet already has a Dreamcatcher."))
 		return
 	end
@@ -41,7 +41,7 @@ petz.put_dreamcatcher = function(self, clicker, wielded_item, wielded_item_name)
 end
 
 petz.drop_dreamcatcher = function(self)
-	if self.dreamcatcher == true then --drop the dreamcatcher
+	if self.dreamcatcher then --drop the dreamcatcher
 		minetest.add_item(self.object:get_pos(), "petz:dreamcatcher")
 		mokapi.make_sound("object", self.object, "petz_pop_sound", petz.settings.max_hear_distance)
 		self.dreamcatcher = false
@@ -50,7 +50,7 @@ petz.drop_dreamcatcher = function(self)
 end
 
 petz.dreamcatcher_save_metadata = function(self)
-	if self.tag == "" or not(self.owner) then
+	if not(self.dreamcatcher) or self.tag == "" or not(self.owner) then
 		return
 	end
 	local item_list_table = petz.tamed_by_owner[self.owner]
@@ -77,7 +77,7 @@ petz.create_form_list_by_owner_dreamcatcher = function(user_name, user_pos)
 			return ''
 		end
 		local item_list = ""
-		local text_color
+		--local text_color
 		for key, pet_table in ipairs(item_list_table) do
 			local pet = pet_table.pet
 			local pet_type
@@ -88,17 +88,17 @@ petz.create_form_list_by_owner_dreamcatcher = function(user_name, user_pos)
 				pet_tag = pet.tag
 				pet_type =  pet.type
 				pet_pos =  pet.object:get_pos()
-				text_color = petz.colors["green"]
+				--text_color = petz.colors["green"]
 				list_pet = true
-			elseif pet_table.metadata.dreamcatcher == true then
+			elseif pet_table.metadata.dreamcatcher then
 				pet_tag = pet_table.metadata.tag
 				pet_type = pet_table.metadata.type
 				pet_pos = pet_table.metadata.last_pos
-				text_color = petz.colors["red"]
+				--text_color = petz.colors["red"]
 				list_pet = true
 			end
 			if list_pet and pet_pos then
-				local pet_type =  pet.type:gsub("^%l", string.upper)
+				pet_type =  pet_type:gsub("^%l", string.upper)
 				local distance, pet_pos_x, pet_pos_y, pet_pos_z
 				distance = tostring(petz.round(vector.distance(user_pos, pet_pos)))
 				pet_pos_x = tostring(math.floor(pet_pos.x+0.5))

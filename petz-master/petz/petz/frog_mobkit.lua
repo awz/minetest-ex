@@ -9,7 +9,7 @@ local mesh = 'petz_frog.b3d'
 local textures= {"petz_frog.png", "petz_frog2.png", "petz_frog3.png"}
 local p1 = {x= -0.125, y = -0.5, z = -0.25}
 local p2 = {x= 0.1875, y = -0.1875, z = 0.1875}
-local collisionbox, collisionbox_baby = petz.get_collisionbox(p1, p2, scale_model, nil)
+local collisionbox = petz.get_collisionbox(p1, p2, scale_model, nil)
 
 minetest.register_entity("petz:"..pet_name,{
 	--Petz specifics
@@ -21,6 +21,9 @@ minetest.register_entity("petz:"..pet_name,{
 	give_orders = false,
 	can_be_brushed = false,
 	capture_item = "net",
+	can_jump = true,
+	jump_ratio = 10,
+	jump_impulse = 4.0,
 	follow = petz.settings.frog_follow,
 	drops = {
 		{name = "petz:frog_leg", chance = 1, min = 1, max = 1,},
@@ -48,6 +51,7 @@ minetest.register_entity("petz:"..pet_name,{
 	animation = {
 		walk={range={x=26, y=38}, speed=25, loop=true},
 		run={range={x=26, y=38}, speed=30, loop=true},
+		jump={range={x=26, y=38}, speed=10, loop=true},
 		stand={
 			{range={x=0, y=12}, speed=5, loop=true},
 		},
@@ -62,6 +66,10 @@ minetest.register_entity("petz:"..pet_name,{
 	on_activate = function(self, staticdata, dtime_s) --on_activate, required
 		mobkit.actfunc(self, staticdata, dtime_s)
 		petz.set_initial_properties(self, staticdata, dtime_s)
+	end,
+
+	on_deactivate = function(self)
+		petz.on_deactivate(self)
 	end,
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)

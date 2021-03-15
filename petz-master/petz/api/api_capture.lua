@@ -1,4 +1,4 @@
-local modpath, S = ...
+local S = ...
 
 --
 -- Register Egg
@@ -6,11 +6,10 @@ local modpath, S = ...
 
 petz.create_pet = function(placer, itemstack, pet_name, pos)
 	local meta = itemstack:get_meta()
-	local meta_table = meta:to_table()
-	local sdata = minetest.serialize(meta_table)
-	local mob = minetest.add_entity(pos, pet_name, sdata)
+	local staticdata = meta:get_string("staticdata")
+	local mob = minetest.add_entity(pos, pet_name, staticdata)
 	local self = mob:get_luaentity()
-	if self.is_wild == false and not(self.owner) then --not monster and not owner
+	if not(self.is_wild) and not(self.owner) then --not monster and not owner
 		mokapi.set_owner(self, placer:get_player_name()) --set owner
 		petz.after_tame(self)
 	end
@@ -41,7 +40,7 @@ function petz:register_egg(pet_name, desc, inv_img, tamed)
 					return
 				end
 				spawn_pos = petz.pos_to_spawn(pet_name, spawn_pos)
-				local ent = petz.create_pet(placer, itemstack, pet_name, spawn_pos)
+				petz.create_pet(placer, itemstack, pet_name, spawn_pos)
 			end
 			return itemstack
 		end,
@@ -61,7 +60,7 @@ petz.check_capture_items = function(self, wielded_item_name, clicker, check_inv_
 		return false
 	end
 	if capture_item_type == self.capture_item then
-		if check_inv_room == true then
+		if check_inv_room then
 			--check for room in inventory
 			local inv = clicker:get_inventory()
 			if inv:room_for_item("main", ItemStack("air")) then
@@ -79,39 +78,25 @@ petz.check_capture_items = function(self, wielded_item_name, clicker, check_inv_
 end
 
 petz.capture = function(self, clicker, put_in_inventory)
+
+	self.captured = mobkit.remember(self, "captured", true) --IMPORTANT! mark as captured
+
 	local new_stack = ItemStack(self.name .. "_set") 	-- add special mob egg with all mob information
+
+	--Save the staticdata into the ItemStack-->
 	local stack_meta = new_stack:get_meta()
-	--local sett ="---TABLE---: "
-	--local sett = ""
-	--local i = 0
-	for key, value in pairs(self) do
-		local what_type = type(value)
-		if what_type ~= "function" and what_type ~= "nil" and what_type ~= "userdata" then
-			if what_type == "boolean" or what_type == "number" then
-				value = tostring(value)
-			elseif what_type == "table" then
-				if key == "saddlebag_inventory" or key == "genes" or key == "father_genes" or key == "father_veloc_stats" then --only this tables to save serialized
-					value = minetest.serialize(value)
-					--minetest.chat_send_player("singleplayer", value)
-				end
-			end
-			stack_meta:set_string(key, value)
-			--i = i + 1
-			--sett= sett .. ", ".. tostring(key).." : ".. tostring(self[key])
-		end
-	end
-	--minetest.chat_send_player("singleplayer", sett)
-	--minetest.chat_send_player("singleplayer", "status="..tostring(self.status))
-	stack_meta:set_string("captured", "true") --IMPORTANT! mark as captured
-	--minetest.chat_send_player("singleplayer", tostring(i))
-	--Info text stuff:
+	local ent = self.object:get_luaentity()
+	local staticdata = ent:get_staticdata(self)
+	stack_meta:set_string("staticdata", staticdata)
+
+	--Info text stuff for the ItemStack
 	local info_text = ""
 	if not(petz.str_is_empty(self.tag)) then
 		info_text = info_text.."\n"..S("Name")..": "..self.tag
 	end
 	if self.breed then
 		local genre
-		if self.is_male == true then
+		if self.is_male then
 			genre = "Male"
 		else
 			genre = "Female"
@@ -134,7 +119,7 @@ petz.capture = function(self, clicker, put_in_inventory)
 		description = self.type
 	end
 	stack_meta:set_string("description", S(petz.first_to_upper(description)).." ("..S("Tamed")..")"..info_text)
-	if put_in_inventory == true then
+	if put_in_inventory then
 		local inv = clicker:get_inventory()
 		if inv:room_for_item("main", new_stack) then
 			inv:add_item("main", new_stack)

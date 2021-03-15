@@ -1,4 +1,4 @@
-local modpath, S = ...
+local S = ...
 
 petz.set_infotext_behive = function(meta, honey_count, bee_count)
 	local total_bees = meta:get_int("total_bees") or petz.settings.max_bees_behive
@@ -24,7 +24,7 @@ petz.behive_exists = function(self)
 	else
 		behive_exists = false
 	end
-	if behive_exists == true then
+	if behive_exists then
 		return true
 	else
 		self.behive = nil

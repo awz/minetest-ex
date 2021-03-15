@@ -1,11 +1,11 @@
-local modpath, S = ...
+local modpath = ...
 
 --
 --Create Dam Beaver Mechanics
 --
 
 petz.create_dam = function(self, pos)
-	if petz.settings.beaver_create_dam == true and self.dam_created == false then --a beaver can create only one dam
+	if petz.settings.beaver_create_dam and not(self.dam_created) then --a beaver can create only one dam
 		if math.random(1, 60000) > 1 then --chance of the dam to be created
 			return false
 		end

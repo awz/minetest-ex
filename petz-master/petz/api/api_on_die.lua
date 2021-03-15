@@ -1,13 +1,15 @@
-local modpath, S = ...
-
 --
 --on_die event for all the mobs
 --
 
 petz.on_die = function(self)
+	self.dead = mobkit.remember(self, "dead", true) --a variable, useful to avoid functions
+	if self.object:get_hp() > 0 then --you can call this function directally
+		self.object:set_hp(0)
+	end
 	local pos = self.object:get_pos()
 	--Specific of each mob-->
-	if self.is_mountable == true then
+	if self.is_mountable then
 		if self.saddle then -- drop saddle when petz is killed while riding
 			minetest.add_item(pos, "petz:saddle")
 		end
@@ -37,7 +39,7 @@ petz.on_die = function(self)
 			petz.force_detach(self.driver)
 		end
 	elseif self.type == "puppy" then
-		if self.square_ball_attached == true and self.attached_squared_ball then
+		if self.square_ball_attached and self.attached_squared_ball then
 			self.attached_squared_ball.object:set_detach()
 		end
 	end
@@ -58,12 +60,13 @@ petz.on_die = function(self)
     --Drop Items-->
 	mokapi.drop_items(self, self.was_killed_by_player or nil)
 	mobkit.clear_queue_high(self)
-	--Remove the owner entry for right_click formspec-->
+	--Remove the owner entry for right_click formspec and close the formspec (it could be opened)-->
 	if petz.pet[self.owner] then
 		petz.pet[self.owner]= nil
+		minetest.close_formspec(self.owner, "petz:form_orders")
 	end
 	--Remove this petz from the list of the player pets-->
-	if self.tamed == true then
+	if self.tamed then
 		petz.remove_tamed_by_owner(self, false)
 	end
 	--Make Sound-->

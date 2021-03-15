@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 --
 -- MONSTER BRAIN
 --
@@ -15,7 +13,7 @@ function petz.monster_brain(self)
 		return
 	end
 
-	mobkit.check_ground_suffocation(self, pos)
+	petz.check_ground_suffocation(self, pos)
 
 	if mobkit.timer(self, 1) then
 
@@ -26,8 +24,6 @@ function petz.monster_brain(self)
 			return
 		end
 
-		local pos = self.object:get_pos() --pos of the petz
-
 		local player = mobkit.get_nearby_player(self) --get the player close
 
 		if prty < 30 then
@@ -36,7 +32,7 @@ function petz.monster_brain(self)
 
 		-- hunt a prey
 		if prty < 12 then -- if not busy with anything important
-			if self.tamed == false then
+			if not self.tamed then
 				local preys_list = petz.settings[self.type.."_preys"]
 				if preys_list then
 					local preys = string.split(preys_list, ',')
@@ -63,7 +59,7 @@ function petz.monster_brain(self)
 						werewolf = true
 					end
 				end
-				if (self.tamed == false and werewolf == false) or (self.tamed == true and self.status == "guard" and player:get_player_name() ~= self.owner) then
+				if (not(self.tamed) and not(werewolf)) or (self.tamed and self.status == "guard" and player:get_player_name() ~= self.owner) then
 					local player_pos = player:get_pos()
 					if vector.distance(pos, player_pos) <= self.view_range then	-- if player close
 						self.max_speed = 2.5

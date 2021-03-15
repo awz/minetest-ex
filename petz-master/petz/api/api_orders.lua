@@ -1,9 +1,7 @@
-local modpath, S = ...
-
 petz.ownthing = function(self)
 	self.status = mobkit.remember(self, "status", nil)
 	if self.can_fly then
-		mobkit.hq_wanderfly(self, 0)
+		petz.hq_wanderfly(self, 0)
 	elseif self.can_swin and self.isinliquid then
 		mobkit.hq_aqua_roam(self, 0, self.max_speed)
 	else
@@ -21,8 +19,8 @@ end
 petz.standhere = function(self)
 	mobkit.clear_queue_high(self)
 	mobkit.clear_queue_low(self)
-	if self.can_fly == true then
-		if mobkit.node_name_in(self, "below") == "air" then
+	if self.can_fly then
+		if petz.node_name_in(self, "below") == "air" then
 			mobkit.animate(self, "fly")
 		else
 			mobkit.animate(self, "stand")
@@ -53,20 +51,20 @@ petz.follow = function(self, player)
 	self.status = mobkit.remember(self, "status", "follow")
 	if self.can_fly then
 		mobkit.animate(self, "fly")
-		mobkit.hq_followliquidair(self, 100, player)
+		petz.hq_followliquidair(self, 100, player)
 	elseif self.can_swin and self.isinliquid then
 		mobkit.animate(self, "def")
-		mobkit.hq_followliquidair(self, 100, player)
+		petz.hq_followliquidair(self, 100, player)
 	else
 		mobkit.hq_follow(self, 100, player)
 	end
 end
 
-petz.alight = function(self)
+petz.alight = function(self, prty, end_status)
 	mobkit.clear_queue_low(self)
 	mobkit.clear_queue_high(self)
-	if not(mobkit.node_name_in(self, "below") == "air") then
+	if not(petz.node_name_in(self, "below") == "air") then
 		mobkit.animate(self, "fly")
 	end
-	mobkit.hq_alight(self, 0)
+	petz.hq_alight(self, prty, end_status)
 end

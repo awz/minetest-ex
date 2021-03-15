@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 petz.puncher_is_player = function(puncher)
 	if type(puncher) == 'userdata' and puncher:is_player() then
 		return true
@@ -22,7 +20,7 @@ petz.calculate_damage = function(self, time_from_last_punch, tool_capabilities)
 	--minetest.chat_send_all(tostring(health_bonus))
 	local luck_bonus = math.random(-1, 1)
 	--minetest.chat_send_all(tostring(luck_bonus))
-	damage = tool_damage + time_bonus + health_bonus + luck_bonus
+	local damage = tool_damage + time_bonus + health_bonus + luck_bonus
 	--minetest.chat_send_all(tostring(damage))
 	return damage
 end
@@ -36,7 +34,7 @@ petz.punch_tamagochi = function (self, puncher)
 	if self.affinity == nil then
 		return
     end
-    if petz.settings.tamagochi_mode == true then
+    if petz.settings.tamagochi_mode then
         if self.owner == puncher:get_player_name() then
             petz.set_affinity(self, -petz.settings.tamagochi_punch_rate)
         end
@@ -71,11 +69,11 @@ function petz.on_punch(self, puncher, time_from_last_punch, tool_capabilities, d
 	if petz.settings.colorize_punch then
 		local punch_texture = self.textures[self.texture_no].."^[colorize:"..petz.settings.punch_color..":125"
 		self.object:set_properties(self, {textures = {punch_texture}})
-		minetest.after(0.1, function(self)
+		minetest.after(0.1, function()
 			if self then
-				self.object:set_properties(self, {textures = { self.textures[self.texture_no]}})
+				self.object:set_properties(self, {textures = { petz.compose_texture(self) }})
 			end
-		end, self)
+		end)
 	end
 	--Do Hurt-->
 	local damage = petz.calculate_damage(self, time_from_last_punch, tool_capabilities)
@@ -97,7 +95,7 @@ function petz.on_punch(self, puncher, time_from_last_punch, tool_capabilities, d
 		petz.force_detach(self.driver)
 	end
 	--Lashing?-->
-	if self.is_wild == true then
+	if self.is_wild then
 		petz.tame_whip(self, puncher)
 	end
 	--Warn Attack?-->

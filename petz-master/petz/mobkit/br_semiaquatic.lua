@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 --
 -- SEMIAQUATIC BRAIN
 --
@@ -15,7 +13,7 @@ function petz.semiaquatic_brain(self)
 	if self.hp <= 0 then
 		petz.on_die(self)
 		return
-	elseif not(petz.is_night()) and self.die_at_daylight == true then --it dies when sun rises up
+	elseif not(petz.is_night()) and self.die_at_daylight then --it dies when sun rises up
 		if minetest.get_node_light(pos, minetest.get_timeofday()) >= self.max_daylight_level then
 			petz.on_die(self)
 			return
@@ -23,7 +21,7 @@ function petz.semiaquatic_brain(self)
 	end
 
 	if not(petz.isinliquid(self)) then
-		mobkit.check_ground_suffocation(self, pos)
+		petz.check_ground_suffocation(self, pos)
 	end
 
 	if mobkit.timer(self, 1) then
@@ -31,39 +29,55 @@ function petz.semiaquatic_brain(self)
 		local prty = mobkit.get_queue_priority(self)
 		local player = mobkit.get_nearby_player(self)
 
-		if prty < 100 then
+		--if prty < 100 then
 			--if petz.isinliquid(self) then
 				--mobkit.hq_liquid_recovery(self, 100)
 			--end
-		end
+		--end
 
 		--Follow Behaviour
 		if prty < 16 then
-			if petz.bh_start_follow(self, pos, player, 16) == true then
+			if petz.bh_start_follow(self, pos, player, 16) then
 				return
 			end
 		end
 
 		if prty == 16 then
-			if petz.bh_stop_follow(self, player) == true then
+			if petz.bh_stop_follow(self, player) then
 				return
 			end
 		end
 
+		-- hunt a prey (frogs)
+		if prty < 12 then -- if not busy with anything important
+			 petz.bh_hunt(self, 12, false)
+		end
+
 		if prty < 10 then
 			if player then
-				if (self.tamed == false) or (self.tamed == true and self.status == "guard" and player:get_player_name() ~= self.owner) then
+				if not(self.tamed) or (self.tamed and self.status == "guard" and player:get_player_name() ~= self.owner) then
 					local player_pos = player:get_pos()
-					if vector.distance(pos, player_pos) <= self.view_range then	-- if player close
-						if self.warn_attack == true then --attack player
-							mobkit.clear_queue_high(self)							-- abandon whatever they've been doing
+					if vector.distance(pos, player_pos) <= self.view_range then -- if player close
+						if self.warn_attack then --attack player
+							mobkit.clear_queue_high(self) -- abandon whatever they've been doing
 							if petz.isinliquid(self) then
-								mobkit.hq_aqua_attack(self, 10, player, 6)				-- get revenge
+								mobkit.hq_aqua_attack(self, 10, player, 6) -- get revenge
 							else
 								petz.hq_hunt(self, 10, player)
 							end
 						end
 					end
+				end
+			end
+		end
+
+		if prty < 8 then
+			if (self.can_jump) and not(self.status) then
+				local random_number = math.random(1, self.jump_ratio)
+				if random_number == 1 then
+					--minetest.chat_send_player("singleplayer", "jump")
+					mobkit.clear_queue_high(self)
+					petz.hq_terrestial_jump(self, 8)
 				end
 			end
 		end

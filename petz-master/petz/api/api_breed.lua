@@ -1,7 +1,7 @@
-local modpath, S = ...
+local S = ...
 
 petz.breed = function(self, clicker, wielded_item, wielded_item_name)
-	if self.is_rut == false and self.is_pregnant == false then
+	if not(self.is_rut) and not(self.is_pregnant) then
 		wielded_item:take_item()
 		clicker:set_wielded_item(wielded_item)
 		self.is_rut = true
@@ -18,7 +18,7 @@ petz.breed = function(self, clicker, wielded_item, wielded_item_name)
 end
 
 petz.pony_breed = function(self, clicker, wielded_item, wielded_item_name)
-	if wielded_item_name == "petz:glass_syringe" and self.is_male== true then
+	if wielded_item_name == "petz:glass_syringe" and self.is_male then
 		local new_wielded_item = ItemStack("petz:glass_syringe_sperm")
 		local meta = new_wielded_item:get_meta()
 		local speedup = (self.horseshoes or 0) * petz.settings.horseshoe_speedup
@@ -38,10 +38,10 @@ petz.pony_breed = function(self, clicker, wielded_item, wielded_item_name)
 		else
 			clicker:set_wielded_item(new_wielded_item)
 		end
-	elseif wielded_item_name == "petz:glass_syringe_sperm" and self.is_male== false then
+	elseif wielded_item_name == "petz:glass_syringe_sperm" and not(self.is_male) then
 		local meta = wielded_item:get_meta()
 		local petz_type = meta:get_string("petz_type")
-		if self.is_pregnant == false and self.pregnant_count > 0 and self.type == petz_type then
+		if not(self.is_pregnant) and self.pregnant_count > 0 and self.type == petz_type then
 			self.is_pregnant = mobkit.remember(self, "is_pregnant", true)
 			local pregnant_count = self.pregnant_count - 1
 			mobkit.remember(self, "pregnant_count", pregnant_count)
@@ -104,7 +104,7 @@ petz.pregnant_timer = function(self, dtime)
 	self.pregnant_time = mobkit.remember(self, "pregnant_time", self.pregnant_time + dtime)
 	if self.pregnant_time >= petz.settings.pregnancy_time then
 		local baby_entity = petz.childbirth(self)
-		if self.is_mountable == true then
+		if self.is_mountable then
 			--Set the genetics accordingly the father and the mother
 			local speedup = (self.horseshoes or 0) * petz.settings.horseshoe_speedup
 			local random_number = math.random(-1, 1)
@@ -145,15 +145,22 @@ petz.growth_timer = function(self, dtime)
 		local pos = self.object:get_pos()
 		pos.y = pos.y + 1.01 -- grows a litte up
 		self.object:set_pos(pos)
-		local vel = self.object:get_velocity()
+		local obj
+		if self.parents then -- for chicken only
+			mokapi.remove_mob(self)
+			obj = minetest.add_entity(pos, self.parents[math.random(1, #self.parents)])
+		else
+			obj = self.object
+			petz.set_properties(self, {
+				jump = false,
+				is_baby = false,
+				visual_size = self.visual_size,
+				collisionbox = self.collisionbox
+			})
+		end
+		local vel = obj:get_velocity()
 		vel.y=vel.y + 4.0
-		self.object:set_velocity(vel)
-		petz.set_properties(self, {
-			jump = false,
-			is_baby = false,
-			visual_size = self.visual_size,
-			collisionbox = self.collisionbox
-		})
-		mokapi.make_sound("object", self.object, "petz_pop_sound", petz.settings.max_hear_distance)
+		obj:set_velocity(vel)
+		mokapi.make_sound("object", obj, "petz_pop_sound", petz.settings.max_hear_distance)
 	end
 end

@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 --
 --Helper Functions
 --
@@ -45,9 +43,9 @@ function petz.truncate(number, decimals)
 end
 
 function petz.vartostring(var)
-	if var == true or var == 1 or var == "true" then
+	if var or var == 1 or var == "true" then
 		return "true"
-	elseif var == false or var == nil or var == 0 or var == "false" then
+	elseif not(var) or var == nil or var == 0 or var == "false" then
 		return "false"
 	else
 		return "false"

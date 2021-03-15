@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 --
 -- Mount Engine
 --
@@ -7,7 +5,7 @@ local modpath, S = ...
 petz.mount = function(self, clicker, wielded_item, wielded_item_name)
 	if clicker:is_player() then
 		local player_pressed_keys = clicker:get_player_control()
-		if player_pressed_keys["sneak"] == true then
+		if player_pressed_keys["sneak"] then
 			return true
 		end
 	end
@@ -16,7 +14,7 @@ petz.mount = function(self, clicker, wielded_item, wielded_item_name)
 			petz.detach(clicker, {x = 1, y = 0, z = 1})
 			mobkit.clear_queue_low(self)
 			return false
-		elseif (self.saddle or self.saddlebag) and wielded_item_name == "petz:shears" then
+		elseif (self.saddle or self.saddlebag) and wielded_item_name == petz.settings.shears then
 			if self.saddle then
 				minetest.add_item(self.object:get_pos(), "petz:saddle")
 				mokapi.make_sound("object", self.object, "petz_pop_sound", petz.settings.max_hear_distance)
@@ -38,7 +36,7 @@ petz.mount = function(self, clicker, wielded_item, wielded_item_name)
 			elseif wielded_item_name == "petz:saddlebag" and not(self.saddlebag) and not(self.type == "pony") then
 				put_saddle = true
 			end
-			if put_saddle == true then
+			if put_saddle then
 				petz.put_saddle(self, clicker, wielded_item, wielded_item_name)
 				return false
 			end
@@ -61,14 +59,14 @@ petz.put_saddle = function(self, clicker, wielded_item, wielded_item_name)
 		saddle_type = "saddle"
 		self.saddle = true
 		mobkit.remember(self, "saddle", self.saddle)
-		if self.saddlebag == true then
+		if self.saddlebag then
 			another_saddle = "^petz_"..self.type.."_saddlebag.png"
 		end
 	else
 		saddle_type = "saddlebag"
 		self.saddlebag = true
 		mobkit.remember(self, "saddlebag", self.saddlebag)
-		if self.saddle == true then
+		if self.saddle then
 			another_saddle = "^petz_"..self.type.."_saddle.png"
 		end
 	end

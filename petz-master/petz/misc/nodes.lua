@@ -1,5 +1,14 @@
 local modpath, S = ...
 
+--[[
+local tree = minetest.serialize_schematic(modpath .. "/schematics/petz_anthill.mts", "lua", {})
+local file = io.open(modpath .. "/schematics/petz_anthill.lua", "w")
+if file then
+	file:write(tree)
+	file:close()
+end
+]]
+
 --Material for Pet's House
 
 minetest.register_node("petz:red_gables", {
@@ -59,7 +68,17 @@ minetest.register_craftitem("petz:kennel", {
             return
         end
         local pt_above = pointed_thing.above
-        if not(minetest.is_protected(pt_above, user:get_player_name())) then
+        local pos2 = {
+			x = pt_above.x + 3,
+			y = pt_above.y + 5,
+			z = pt_above.z + 4,
+		}
+		local player_name = user:get_player_name()
+		if petz.settings["disable_kennel"] then
+			minetest.chat_send_player(player_name, S("The placement of kennel was disabled."))
+			return
+		end
+		if not(minetest.is_area_protected(pt_above, pos2, player_name, 4)) then
 			minetest.place_schematic(pt_above, modpath..'/schematics/kennel.mts', 0, nil, true)
 			itemstack:take_item()
 			return itemstack
@@ -132,6 +151,7 @@ minetest.register_node("petz:ducky_nest_egg", {
     inventory_image = "petz_ducky_nest_egg_inv.png",
     wield_image = "petz_ducky_nest_egg_inv.png",
     tiles = {"petz_ducky_nest_egg.png"},
+	use_texture_alpha = true,
     groups = {snappy=1, bendy=2, cracky=1},
     sounds = default.node_sound_wood_defaults(),
     paramtype = "light",
@@ -146,6 +166,21 @@ minetest.register_node("petz:ducky_nest_egg", {
         type = "fixed",
         fixed= {-0.25, -0.75, -0.25, 0.25, -0.25, 0.25},
     },
+    on_construct = function(pos)
+		local timer = minetest.get_node_timer(pos)
+		timer:start(math.random(400, 600))
+    end,
+	on_timer = function(pos)
+        local pos_above = {x = pos.x, y = pos.y +1, z= pos.z}
+        if pos_above then
+            if not minetest.registered_entities["petz:ducky"] then
+                return
+            end
+            minetest.add_entity(pos_above, "petz:ducky")
+            minetest.set_node(pos, {name= "petz:ducky_nest"})
+            return true
+        end
+    end,
 	on_rightclick = function(pos, node, player, itemstack, pointed_thing)
 		petz.extract_egg_from_nest(pos, player, "petz:ducky_egg") --extract the egg
 	end,
@@ -162,6 +197,7 @@ minetest.register_node("petz:chicken_nest_egg", {
     mesh = 'petz_ducky_nest_egg.b3d',
     visual_size = {x = 1.3, y = 1.3},
     tiles = {"petz_chicken_nest_egg.png"},
+    use_texture_alpha = true,
     collision_box = {
         type = "fixed",
         fixed= {-0.25, -0.75, -0.25, 0.25, -0.25, 0.25},
@@ -170,6 +206,24 @@ minetest.register_node("petz:chicken_nest_egg", {
         type = "fixed",
         fixed= {-0.25, -0.75, -0.25, 0.25, -0.25, 0.25},
     },
+    on_construct = function(pos)
+		local timer = minetest.get_node_timer(pos)
+		local hatch_egg_timing = petz.settings.hatch_egg_timing
+		timer:start(math.random(hatch_egg_timing - (hatch_egg_timing*0.2), hatch_egg_timing+ (hatch_egg_timing*0.2)))
+    end,
+	on_timer = function(pos)
+		local pos_above = {x = pos.x, y = pos.y +1, z= pos.z}
+		if pos_above then
+			if not minetest.registered_entities["petz:chicken"] then
+				return
+			end
+			local entity = minetest.add_entity(pos_above, "petz:chicken"):get_luaentity()
+			entity.is_baby = mobkit.remember(entity, "is_baby", true) --it is a baby
+			entity.growth_time = mobkit.remember(entity, "growth_time", 0.0) --the chicken to grow
+			minetest.set_node(pos, {name= "petz:ducky_nest"})
+			return true
+		end
+	end,
 	on_rightclick = function(pos, node, player, itemstack, pointed_thing)
 		petz.extract_egg_from_nest(pos, player, "petz:chicken_egg") --extract the egg
 	end,
@@ -183,45 +237,6 @@ minetest.register_craft({
         {'group:leaves', 'petz:ducky_egg', 'group:leaves'},
         {'default:papyrus', 'default:papyrus', 'default:papyrus'},
     }
-})
-
--- Chance to hatch an egg into a ducky or chicken
-minetest.register_abm({
-    nodenames = {"petz:ducky_nest_egg"},
-    neighbors = {},
-    interval = 600.0, -- Run every 10 minuts
-    chance = 5, -- Select every 1 in 3 nodes
-    action = function(pos, node, active_object_count, active_object_count_wider)
-        local pos_above = {x = pos.x, y = pos.y +1, z= pos.z}
-        if pos_above then
-            if not minetest.registered_entities["petz:ducky"] then
-                return
-            end
-            --pos.y = pos.y + 1
-            local mob = minetest.add_entity(pos_above, "petz:ducky")
-            local ent = mob:get_luaentity()
-            minetest.set_node(pos, {name= "petz:ducky_nest"})
-        end
-    end
-})
-
-minetest.register_abm({
-    nodenames = {"petz:chicken_nest_egg"},
-    neighbors = {},
-    interval = 600.0, -- Run every 10 minuts
-    chance = 5, -- Select every 1 in 3 nodes
-    action = function(pos, node, active_object_count, active_object_count_wider)
-        local pos_above = {x = pos.x, y = pos.y +1, z= pos.z}
-        if pos_above then
-            if not minetest.registered_entities["petz:chicken"] then
-                return
-            end
-            --pos.y = pos.y + 1
-            local mob = minetest.add_entity(pos_above, "petz:chicken")
-            local ent = mob:get_luaentity()
-            minetest.set_node(pos, {name= "petz:ducky_nest"})
-        end
-    end
 })
 
 --Vanilla Wool
@@ -339,10 +354,11 @@ minetest.register_node("petz:beehive", {
 	groups = {snappy = 2, choppy = 2, oddly_breakable_by_hand = 3,
 		flammable = 3, wool = 1},
 	sounds = default.node_sound_defaults(),
+	drop = {},
 	on_construct = function(pos)
 		local meta = minetest.get_meta(pos)
 		local	drops = {
-			{name = "petz:honeycomb", chance = 1, min = 6, max= 6},
+			{name = "petz:honeycomb", chance = 1, min = 1, max= 6},
 		}
 		meta:set_string("drops", minetest.serialize(drops))
 		local timer = minetest.get_node_timer(pos)
@@ -356,20 +372,39 @@ minetest.register_node("petz:beehive", {
 	end,
 	after_place_node = function(pos, placer, itemstack, pointed_thing)
 		local meta = minetest.get_meta(pos)
-		local honey_count = petz.settings.initial_honey_behive
-		meta:set_int("honey_count", honey_count)
+		local honey_count
 		local bee_count
 		if placer:is_player() then
-			bee_count = 1
+			honey_count = 0
+			bee_count = 0
+			minetest.after(petz.settings.worker_bee_delay, function()
+				local node =minetest.get_node_or_nil(pos)
+				if not(node and node.name == "petz:beehive") then
+					return
+				end
+				meta = minetest.get_meta(pos)
+				local total_bees = meta:get_int("total_bees") or petz.settings.max_bees_behive
+				if total_bees < petz.settings.max_bees_behive then
+					bee_count = meta:get_int("bee_count")
+					bee_count = bee_count + 1
+					total_bees = total_bees + 1
+					meta:set_int('bee_count', bee_count)
+					meta:set_int('total_bees', total_bees)
+					honey_count = meta:get_int('honey_count')
+					petz.set_infotext_behive(meta, honey_count, bee_count)
+				end
+			end, pos)
 		else
+			honey_count = petz.settings.initial_honey_behive
 			bee_count = petz.settings.max_bees_behive
 		end
+		meta:set_int("honey_count", honey_count)
 		meta:set_int("bee_count", bee_count)
 		meta:set_int("total_bees", bee_count)
 		petz.set_infotext_behive(meta, honey_count, bee_count)
 	end,
 	on_destruct = function(pos)
-		local self = minetest.add_entity(pos, "petz:queen_bee")
+		minetest.add_entity(pos, "petz:queen_bee")
 		mokapi.node_drop_items(pos)
 	end,
 	on_timer = function(pos)
@@ -462,14 +497,31 @@ minetest.register_craft({
 	output = "petz:beehive",
 	recipe = {
 		{"petz:honeycomb", "petz:honeycomb", "petz:honeycomb"},
-		{"petz:honeycomb", "petz:bee_set", "petz:honeycomb"},
+		{"petz:honeycomb", "petz:queen_bee_set", "petz:honeycomb"},
 		{"petz:honeycomb", "petz:honeycomb", "petz:honeycomb"},
 	}
 })
 
 --Halloween Update
 
-minetest.register_node("petz:jack_o_lantern", {
+if minetest.get_modpath("farming") ~= nil and farming.mod == "redo" then
+
+   minetest.register_alias("petz:jack_o_lantern", "farming:jackolantern")
+   
+	minetest.register_craft({
+		type = "shapeless",
+		output = "petz:jack_o_lantern",
+		recipe = {"farming:pumpkin", "petz:beeswax_candle"},
+	})
+	minetest.register_craft({
+		type = "shapeless",
+		output = "petz:jack_o_lantern",
+		recipe = {"farming:pumpkin", "default:torch"},
+	})
+
+else
+
+   minetest.register_node("petz:jack_o_lantern", {
 	description = S("Jack-o'-lantern"),
 	groups = { snappy=3, flammable=3, oddly_breakable_by_hand=2 },
 	sounds = default.node_sound_wood_defaults({
@@ -485,19 +537,8 @@ minetest.register_node("petz:jack_o_lantern", {
 		"petz_jackolantern_right.png", "petz_jackolantern_left.png",
 		"petz_jackolantern_back.png", "petz_jackolantern_front.png"
     },
-})
-
-if minetest.get_modpath("farming") ~= nil and farming.mod == "redo" then
-	minetest.register_craft({
-		type = "shapeless",
-		output = "petz:jack_o_lantern",
-		recipe = {"farming:pumpkin", "petz:beeswax_candle"},
-	})
-	minetest.register_craft({
-		type = "shapeless",
-		output = "petz:jack_o_lantern",
-		recipe = {"farming:pumpkin", "default:torch"},
-	})
+   })
+   
 end
 
 if minetest.get_modpath("crops") ~= nil then
@@ -518,7 +559,7 @@ minetest.register_node("petz:poop", {
     description = S("Poop"),
     inventory_image = "petz_poop_inv.png",
     tiles = {"petz_poop.png"},
-    groups = {crumbly=1, falling_node=1},
+    groups = {crumbly=3, falling_node=1},
     sounds = default.node_sound_stone_defaults(),
     paramtype = "light",
 	walkable = false,
@@ -574,6 +615,7 @@ minetest.register_node("petz:cat_basket", {
 		"petz_cat_basket_side.png",
 		"petz_cat_basket_side.png"
 	},
+	use_texture_alpha = true,
 	drawtype = "nodebox",
 	paramtype = "light",
 	groups = {snappy=1, bendy=2, cracky=1},
@@ -696,4 +738,165 @@ minetest.register_node("petz:honey_block", {
 	sounds = default.node_sound_glass_defaults(),
 })
 
+--Ant Nodes
 
+minetest.register_node("petz:antbed", {
+    description = S("Ant-bed"),
+    tiles = {"petz_antbed.png"},
+    is_ground_content = false,
+	groups = {crumbly = 3},
+	sounds = default.node_sound_leaves_defaults(),
+})
+
+minetest.register_craft({
+	type = "shaped",
+	output = "petz:antbed",
+	recipe = {
+		{"farming:wheat", "group:leaves", "farming:wheat"},
+		{"farming:cotton", "farming:seed_wheat", "farming:cotton"},
+		{"farming:wheat", "group:leaves", "farming:wheat"},
+	}
+})
+
+minetest.register_node("petz:anthill_entrance", {
+    description = S("Anthill Entrance"),
+    tiles = {"petz_anthill_entrance.png", "petz_anthill_entrance.png", "petz_antbed.png"},
+    is_ground_content = false,
+	groups = {crumbly = 3},
+	sounds = default.node_sound_leaves_defaults(),
+
+	on_construct = function(pos)
+		local timer = minetest.get_node_timer(pos)
+		timer:start(5) --check to defend the anthill entrance each 5 seconds
+    end,
+
+	on_timer = function(pos) --check the entrance to defend it
+		local pos_top = {
+				x = pos.x,
+				y = pos.y + 0.5,
+				z = pos.z,
+		}
+		local node = minetest.get_node_or_nil(pos_top)
+		if node and minetest.registered_nodes[node.name] and node.name == "air" then
+			local chance_worker = math.random(1, 240) --once a day a worker ant arises
+			if chance_worker == 1 then
+				if not minetest.registered_entities["petz:ant"] then
+					return true
+				end
+				minetest.add_entity(pos_top, "petz:ant")
+			end
+			--Check if player near (on a radius of 7) to spawn a warrior ant to defend the anthill
+			local nearby_objects = minetest.get_objects_inside_radius(pos, 7)
+
+			local player_near = false
+			for _, obj in ipairs(nearby_objects) do
+				if obj:is_player() and mobkit.is_alive(obj) then
+					player_near = true
+					break
+				end
+			end
+			if player_near then
+				if not minetest.registered_entities["petz:warrior_ant"] then
+					return true
+				end
+				minetest.add_entity(pos_top, "petz:warrior_ant")
+			end
+		end
+		return true --always do the check again
+	end
+})
+
+minetest.register_node("petz:antegg", {
+	description = S("Ant Egg"),
+	drawtype = "nodebox",
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.25, -0.5, -0.25, 0.25, 0.0, 0.25},
+		}
+	},
+	tiles =  {"petz_antegg.png"},
+	walkable = true,
+	groups = {snappy = 2, },
+	paramtype = "light",
+	paramtype2 = "glasslikeliquidlevel",
+	param2 = 50,
+	sunlight_propagates = true,
+	use_texture_alpha = true,
+	light_source = default.LIGHT_MAX - 10,
+	sounds = default.node_sound_leaves_defaults(),
+
+	on_construct = function(pos)
+		local timer = minetest.get_node_timer(pos)
+		local lay_antegg_timing = petz.settings.lay_antegg_timing
+		timer:start(math.random(lay_antegg_timing - (lay_antegg_timing*0.2), lay_antegg_timing + (lay_antegg_timing*0.2)))
+    end,
+
+	on_timer = function(pos)
+		local entity
+		local chance = math.random(1, 100) --for the type of ant
+		if chance >= 20 then
+			entity ="petz:ant"
+		elseif chance >= 4 and chance < 20 then
+			entity ="petz:warrior_ant"
+		else
+			entity ="petz:queen_ant"
+		end
+		if not minetest.registered_entities[entity] then
+			return true
+		end
+		minetest.add_entity(pos, entity) --spawn the warrior ant
+		minetest.set_node(pos, {name= "air"}) --remove the node
+		return false
+	end
+})
+
+minetest.register_node("petz:grain_packet", {
+    description = S("Grain Packet"),
+    tiles = {"petz_grain_packet.png"},
+    is_ground_content = false,
+	groups = {snappy = 3, flammable = 2},
+	sounds = default.node_sound_leaves_defaults(),
+	drop = {
+		max_items = 15,
+		items = {
+			{
+				items = {'farming:seed_wheat 5'}
+			},
+			{
+				items = {'farming:seed_cotton'},
+				rarity = 5,
+			},
+			{
+				items = {'default:apple'},
+				rarity = 15,
+			},
+			{
+			items = {'default:blueberries'},
+				rarity = 20,
+			},
+			{
+				items = {'default:iron_lump'},
+				rarity = 25,
+			},
+			{
+				items = {'default:gold_lump'},
+				rarity = 40,
+			},
+			{
+				items = {'default:diamond'},
+				rarity = 80,
+			},
+		}
+	},
+})
+
+minetest.register_craft({
+	type = "shapeless",
+	output = "petz:grain_packet",
+	recipe = {
+		"farming:seed_wheat", "farming:seed_wheat", "farming:seed_wheat",
+		"farming:seed_wheat", "farming:seed_wheat", "farming:seed_wheat",
+		"farming:seed_wheat", "farming:seed_wheat", "farming:seed_wheat"
+	}
+})

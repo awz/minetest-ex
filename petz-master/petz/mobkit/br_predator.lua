@@ -1,5 +1,3 @@
-local modpath, S = ...
-
 --
 -- PREDATOR BRAIN
 --
@@ -15,7 +13,7 @@ function petz.predator_brain(self)
 		return
 	end
 
-	mobkit.check_ground_suffocation(self, pos)
+	petz.check_ground_suffocation(self, pos)
 
 	if mobkit.timer(self, 1) then
 
@@ -26,8 +24,6 @@ function petz.predator_brain(self)
 			return
 		end
 
-		local pos = self.object:get_pos() --pos of the petz
-
 		local player = mobkit.get_nearby_player(self) --get the player close
 
 		if prty < 30 then
@@ -36,41 +32,25 @@ function petz.predator_brain(self)
 
 		--Follow Behaviour
 		if prty < 16 then
-			if petz.bh_start_follow(self, pos, player, 16) == true then
+			if petz.bh_start_follow(self, pos, player, 16) then
 				return
 			end
 		end
 
 		if prty == 16 then
-			if petz.bh_stop_follow(self, player) == true then
+			if petz.bh_stop_follow(self, player) then
 				return
 			end
 		end
 
 		-- hunt a prey
 		if prty < 12 then -- if not busy with anything important
-			if self.tamed == false then
-				local preys_list = petz.settings[self.type.."_preys"]
-				if preys_list then
-					preys_list = petz.str_remove_spaces(preys_list)
-					local preys = string.split(preys_list, ',')
-					for i = 1, #preys  do --loop  thru all preys
-						--minetest.chat_send_player("singleplayer", "preys list="..preys[i])
-						--minetest.chat_send_player("singleplayer", "node name="..node.name)
-						local prey = mobkit.get_closest_entity(self, preys[i])	-- look for prey
-						if prey then
-							--minetest.chat_send_player("singleplayer", "got it")
-							petz.hq_hunt(self, 12, prey) -- and chase it
-							return
-						end
-					end
-				end
-			end
+			 petz.bh_hunt(self, 12, false)
 		end
 
 		if prty < 10 then
 			if player then
-				if petz.bh_attack_player(self, pos, 10, player) == true then
+				if petz.bh_attack_player(self, pos, 10, player) then
 					return
 				end
 			end

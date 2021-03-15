@@ -1,10 +1,8 @@
-local modpath, S = ...
-
 --
 --Particle Effects
 --
 
-petz.do_particles_effect = function(obj, pos, particle_type)
+petz.do_particles_effect = function(obj, pos, particle_type, texture_name)
     local minpos
     minpos = {
         x = pos.x,
@@ -17,7 +15,6 @@ petz.do_particles_effect = function(obj, pos, particle_type)
         y = minpos.y - 0.5,
         z = minpos.z + 0.4
     }
-    local texture_name
     local time
     local particles_amount
     local min_size
@@ -78,6 +75,11 @@ petz.do_particles_effect = function(obj, pos, particle_type)
 		max_size = 4.0
 	elseif particle_type == "sleep" then
         texture_name = "petz_sleep_particle.png"
+        time = 1.5
+        particles_amount = 3
+        min_size = 1.0
+		max_size = 2.0
+	elseif particle_type == "hungry" then
         time = 1.5
         particles_amount = 3
         min_size = 1.0

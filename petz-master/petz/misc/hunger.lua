@@ -59,4 +59,46 @@ if minetest.get_modpath("hunger_ng") ~= nil then
 	hunger_ng.add_hunger_data('petz:candy_cane', {
 		satiates = 6.0,
 	})
+	hunger_ng.add_hunger_data('petz:beef', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:roasted_ducky', {
+		satiates = 3.0,
+	})
+	hunger_ng.add_hunger_data('petz:roasted_rabbit', {
+		satiates = 3.0,
+	})
+	hunger_ng.add_hunger_data('petz:roasted_goat_meat', {
+		satiates = 4.0,
+	})
+	hunger_ng.add_hunger_data('petz:raw_rabbit', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:frog_leg', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:honey_bottle', {
+		satiates = 7.0,
+	})
+	hunger_ng.add_hunger_data('petz:mini_lamb_chop', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:raw_chicken', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:raw_ducky', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:raw_goat', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:raw_parrot', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:raw_porkchop', {
+		satiates = 1.0,
+	})
+	hunger_ng.add_hunger_data('petz:chicken_legs', {
+		satiates = 1.0,
+	})
 end
